@@ -1019,57 +1019,125 @@ WHERE
 	genero = 'TERROR';
 
 
+--b)
+EXPLAIN SELECT v.nombre, v.apellido, v.e_mail, v.telefono
+FROM voluntario v
+WHERE v.nro_voluntario IN (
+	SELECT h.nro_voluntario
+	FROM historico h
+	WHERE h.fecha_fin < to_date('1998-07-24','yyyy-mm-dd') AND h.id_tarea IN (
+		SELECT t.id_tarea
+		FROM tarea t
+		WHERE t.max_horas - t.min_horas <= 5000
+	)
+)
+
 --END PRACTICO 4 PARTE 1 #############################################################################################
 --####################################################################################################################
 
-SELECT relpages, reltuples
-FROM pg_class
-WHERE relname = 'voluntario'
 
 
-EXPLAIN SELECT nro_voluntario
-FROM voluntario v, tarea t
-WHERE v.id_tarea = t.id_tarea
+--####################################################################################################################
+--BEGIN PRACTICO 5 ###################################################################################################
 
-SELECT h.nro_voluntario
-FROM historico h
-WHERE h.id_tarea IN (
-	SELECT t.id_tarea
-	FROM tarea t
-	WHERE t.max_horas - t.min_horas <= 5000
-)
+--EJERCICIO 1
+--a)
 
-
-SELECT id_tarea
-FROM historico
-INTERSECT
-SELECT id_tarea
-FROM tarea
-WHERE  max_horas - min_horas <= 5000
-
-
-
-
-
-
-CREATE VIEW Distribuidor_200  AS
-SELECT id_distribuidor, nombre, tipo
-FROM unc_esq_peliculas.distribuidor
-WHERE id_distribuidor > 200;
-
-DROP VIEW Distribuidor_200
-
-CREATE VIEW Departamento_dist_200 AS
-SELECT id_departamento, nombre, id_ciudad, jefe_departamento
-FROM unc_esq_peliculas.departamento 
-WHERE id_distribuidor > 200;
-
-
+CREATE VIEW ENVIOS500 AS 
 SELECT *
-FROM Distribuidor_200
+FROM envio
+WHERE cantidad >= 500
+--b) actualizable se utiliza el id de la tabla
+-- es una sola tabla y no se utiliza distinct ni nada rarito
+-- ni tampoco subconsultas en el select
+CREATE VIEW ENVIOS500-999_ AS
+SELECT *
+FROM envios500
+WHERE cantdad < 1000
+--b) actualizable idem a la anterior
+
+
+CREATE VIEW PRODUCTOS_MAS_PEDIDOS AS
+SELECT id_articulo
+FROM articulo
+WHERE id_articulo IN (
+	SELECT id_articulo
+	FROM envios500
+)
+--b) idem a la anterior
+
+CREATE VIEW ENVIOS_PROV AS 
+SELECT id_proveedor, count(*)
+FROM envio
+GROUP BY id_proveedor
+--b) no es actualizable xq se utiliza una función de agregación
+-- además tampoco se utiliza la clave completa
+
+--c)
+--estas no importa si tienen un check o no, ya que son inserts
+INSERT INTO envios500 VALUES ('P1','A1',500);
+INSERT INTO ENVIOS500 VALUES ('P2', 'A2', 300);
+
+--funciona de 10 si se realiza un check o no
+UPDATE ENVIOS500 SET cantidad=1000 WHERE id_proveedor= 'P1';
+
+--si no se hace un check funciona y si se hace un check no xq no cumple la condición
+UPDATE ENVIOS500 SET cantidad=100 WHERE id_proveedor= 'P1';
+
+--EJERCICIO 2
+-- respondido en la carpeta
+
+--EJERCICIO 3
+
+--1
+CREATE VIEW empleado_dist_20 AS
+SELECT id_empleado, nombre, apellido, sueldo, fecha_nacimiento
+FROM unc_esq_peliculas.empleado
+WHERE id_distribuidor = 20
+
+--2
+CREATE VIEW empleado_dist_2000 AS
+SELECT nombre, apellido, sueldo
+FROM empleado_dist_20
+WHERE sueldo > 2000
+
+--3
+CREATE VIEW empleado_20_70 AS
+SELECT id_empleado
+FROM empleado_dist_20
+WHERE EXTRACT (YEAR FROM fecha_nacimiento) BETWEEN 1970 AND 1979
+
+--4
+CREATE VIEW peliculas_entregadas AS
+SELECT codigo_pelicula, cantidad
+FROM renglon_entrega
+
+--5
+CREATE VIEW distribuidoras_argentina AS 
+SELECT d.id_distribuidor, nombre, direccion, telefono, tipo, nro_inscripcion, encargado
+FROM unc_esq_peliculas.distribuidor d JOIN unc_esq_peliculas.nacional n ON (d.id_distribuidor = n.id_distribuidor) 
+
+--6
+CREATE VIEW distribuidoras_mas_2_emp AS
+SELECT *
+FROM distribuidoras_argentina
+WHERE id_distribuidor IN (
+	SELECT id_distribuidor
+	FROM unc_esq_peliculas.departamento
+	WHERE id_departamento IN (
+		SELECT id_departamento
+		FROM unc_esq_peliculas.empleado
+		GROUP BY id_departamento
+		HAVING count(*) > 2
+	)
+)
+
 
 
 
+
+--END PRACTICO 5#####################################################################################################
+--####################################################################################################################
 
 
 
