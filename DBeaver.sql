@@ -876,6 +876,46 @@ $$
 $$
 LANGUAGE 'plpgsql';
 
+--a)
+CREATE OR REPLACE FUNCTION FN_cambio_tarea() RETURNS trigger AS
+$$
+	--DECLARE
+	BEGIN
+		NEW.horas_aportadas:= 0;
+		RETURN NEW;
+	END 
+$$
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER TR_cambio_tarea
+	AFTER UPDATE OF id_tarea
+	ON voluntario_voluntario
+	FOR EACH ROW 
+	--WHEN (Condition) i.e NEW.nombre_pais = 'Argentina'
+	EXECUTE PROCEDURE FN_cambio_tarea();
+
+--b)
+CREATE OR REPLACE FUNCTION FN_horas_aportadas_10percento() RETURNS trigger AS
+$$
+	--DECLARE
+	BEGIN
+		--new.column := value;
+		IF(NEW.horas_aportadas  NOT BETWEEN OLD.horas_aportadas*0.9 AND OLD.horas_aportadas*1.1) THEN 
+			RAISE NOTICE '%',OLD.horas_aportadas;
+			RAISE EXCEPTION 'NO SE PUEDE TENER HORAS MENOS NI MAS DEL 10%% DE LO ANTERIOR';
+		END IF;
+		RETURN NEW;
+	END 
+$$
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER TR_horas_aportadas_10percento
+	BEFORE UPDATE OF horas_aportadas
+	ON voluntario_voluntario
+	FOR EACH ROW 
+	--WHEN (Condition) i.e NEW.nombre_pais = 'Argentina'
+	EXECUTE PROCEDURE FN_horas_aportadas_10percento();
+
 CREATE TRIGGER TR_horas_aportadas_less_than_before
 	BEFORE UPDATE OF horas_aportadas
 	ON voluntario
@@ -909,6 +949,22 @@ CREATE TRIGGER TR_registro_autores
 	--WHEN (Condition) i.e NEW.nombre_pais = 'Argentina'
 	EXECUTE PROCEDURE FN_registro_autores();
 
+
+CREATE OR REPLACE PROCEDURE actualizarTablas()
+LANGUAGE 'plpgsql' AS
+$$
+	BEGIN
+		INSERT INTO textoporautor
+			SELECT autor, count(*), max(fecha_pub)
+			FROM id_articulo
+			GROUP BY autor
+			HAVING autor IS NOT NULL AND fecha_pub IS NOT NULL 
+		;
+		--don't use new or old
+		-- to use it you must do call actualizarTablas
+	END;
+$$;
+
 --END PRACTICO 3 PARTE 2 #############################################################################################
 --####################################################################################################################
 
@@ -918,11 +974,8 @@ CREATE TRIGGER TR_registro_autores
 
 
 
-
-
-
 --####################################################################################################################
---BEGIN PRACTICO 4 PARTE 1 ###########################################################################################
+--BEGIN PRACTICO 4 ###################################################################################################
 
 --EJERCICIO 2
 
@@ -1032,7 +1085,77 @@ WHERE v.nro_voluntario IN (
 	)
 )
 
---END PRACTICO 4 PARTE 1 #############################################################################################
+--EJERCICIO 6
+
+CREATE TABLE empleado (
+	id_empleado int,
+	nombre varchar(50) NOT NULL,
+	apellido varchar(50) NOT NULL,
+	cargo varchar(80) NOT NULL,
+	CONSTRAINT PK_empleado PRIMARY KEY (id_empleado)
+);
+ 
+CREATE TABLE proyecto (
+	cod_proyecto int,
+	nombre varchar(80) NOT NULL,
+	fecha_desde date NOT NULL,
+	fecha_hasta date NOT NULL,
+	CONSTRAINT PK_proyecto PRIMARY KEY (cod_proyecto)
+);
+
+CREATE TABLE trabaja_en (
+	id_empleado int,
+	cod_proyecto int,
+	cant_horas int NOT NULL,
+	CONSTRAINT PK_trabaja_en PRIMARY KEY (id_empleado,cod_proyecto)
+);
+
+ALTER TABLE trabaja_en
+	ADD CONSTRAINT FK_trabaja_en_empleado
+	FOREIGN KEY (id_empleado)
+	REFERENCES empleado (id_empleado)
+;
+
+ALTER TABLE trabaja_en
+	ADD CONSTRAINT FK_trabaja_en_proyecto
+	FOREIGN KEY (cod_proyecto)
+	REFERENCES proyecto (cod_proyecto)
+;
+
+INSERT INTO empleado(id_empleado,nombre,apellido,cargo) VALUES
+	(1,'Juan','Perez','investigador'),
+	(2,'Rosa','Gomes','investigador'),
+	(3,'Bruno','Fernandez','becario'),
+	(4,'Ignacio','Rodriguez','becario'),
+	(5,'Alejandro','Perez','investigador'),
+	(6,'Sebastian','Solano','investigador')
+;
+
+INSERT INTO proyecto(cod_proyecto,nombre,fecha_desde,fecha_hasta) VALUES
+	(1,'ROBOTICS','2018-01-01','2020-01-01'),
+	(2,'AI','2017-01-01','2020-01-01'),
+	(3,'IMAGE','2015-01-01','2017-01-01')
+;
+
+INSERT INTO trabaja_en(id_empleado,cod_proyecto,cant_horas) VALUES
+	(1,1,40),
+	(2,1,40),
+	(3,1,20),
+	(4,1,20),
+	(5,1,40),
+	(6,1,40),
+	(1,2,40),
+	(3,2,20),
+	(6,2,20),
+	(3,3,10),
+	(6,3,10)
+;
+
+EXPLAIN ANALYZE SELECT DISTINCT e.*
+FROM empleado e, trabaja_en t, proyecto p
+WHERE e.id_empleado = t.id_empleado AND p.cod_proyecto = t.cod_proyecto AND e.cargo = 'investigador'
+
+--END PRACTICO 4 #####################################################################################################
 --####################################################################################################################
 
 
@@ -1131,12 +1254,11 @@ WHERE id_distribuidor IN (
 		HAVING count(*) > 2
 	)
 )
-
 
 
 
 
---END PRACTICO 5#####################################################################################################
+--END PRACTICO 5 #####################################################################################################
 --####################################################################################################################
 
 
