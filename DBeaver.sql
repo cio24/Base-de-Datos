@@ -305,16 +305,16 @@ having count(*) > 0.2*(
 
 --EJERCICIO 3--------------------
 
-PARA EL EJERCICIO A Y B, PODR�A DEJARLO PLANTEADO COMO DOMINIOS O SIMPLEMENTE CON HACER UN ALTER TABLE CHECK YA ESTAR�A?
+PARA EL EJERCICIO A Y B, PODRÃ�A DEJARLO PLANTEADO COMO DOMINIOS O SIMPLEMENTE CON HACER UN ALTER TABLE CHECK YA ESTARÃ�A?
 --a)
 CREATE DOMAIN nacionalidad_valida AS varchar(40) NOT NULL
-CHECK (value LIKE 'Argentina' OR value LIKE 'Espa�ol' OR value LIKE 'Ingl�s' OR value LIKE 'Chilena' OR value LIKE 'Alem�n');
+CHECK (value LIKE 'Argentina' OR value LIKE 'EspaÃ±ol' OR value LIKE 'InglÃ©s' OR value LIKE 'Chilena' OR value LIKE 'AlemÃ¡n');
 
 --b)
 CREATE DOMAIN fecha_valida AS date NOT NULL
 CHECK (EXTRACT (YEAR FROM value) >= 2010));
 
-ESTA BIEN PLANTEADA LA CONDICI�N?
+ESTA BIEN PLANTEADA LA CONDICIÃ“N?
 --c)
 ALTER TABLE articulo ADD CONSTRAINT ck_art_2017_arg
 CHECK (
@@ -355,7 +355,7 @@ begin
 	from contiene
 	where id_articulo = new.id_articulo
 	if(cant>2) then
-		raise exception 'Super� la cantidad de palabras claves:%',cantidad;
+		raise exception 'SuperÃ³ la cantidad de palabras claves:%',cantidad;
 	end if;
 	return new;
 end $$
@@ -386,7 +386,7 @@ check(
 	descripcion is not null or presentacion is not null
 );
 
---d) como se verifica que no se cambie una localidad de sucursal y proveedor?? habr�a que agregar esta misma constraint???
+--d) como se verifica que no se cambie una localidad de sucursal y proveedor?? habrÃ­a que agregar esta misma constraint???
 -- CAPAZ QUE ES XQ SI YO INTENTO CAMBIAR UNA LOCALIDAD ESTA CONSTRAINT NO ME DEJA...
 CREATE ASSERTION prod_suc_mismaLoc
 CHECK (
@@ -399,7 +399,6 @@ CHECK (
 	)
 );
 
-
 --EJERCICIO 5--------------------
 
 --a)
@@ -410,8 +409,7 @@ check (
 
 
 --b)
-
---quer�a ver si se puede hacer algo de este estilo, como el inciso de arriba por ejemplo, cuando hace el check, solo chequea
+--querÃ­a ver si se puede hacer algo de este estilo, como el inciso de arriba por ejemplo, cuando hace el check, solo chequea
 -- que lo que se esta queriendo agregar tenga un campo fecha de nacimiento que cumpla con eso? no me queda claro como funciona
 alter table voluntario add constraint ck_vol_moreHours_than_coor
 check (
@@ -436,7 +434,7 @@ IF (EXISTS (SELECT 1
 
 
 
---esta es la versi�n que creo que anda, pero que hace un select, por lo cual podr�a ser menos eficiente que el de arriba
+--esta es la versiÃ³n que creo que anda, pero que hace un select, por lo cual podrÃ­a ser menos eficiente que el de arriba
 -- en el caso de que el de arriba sea valido obvio
 alter table voluntario add constraint ck_vol_moreHours_than_coor
 check (
@@ -528,7 +526,7 @@ $$
 			FROM contiene
 			WHERE id_articulo = NEW.id_articulo;
 			IF(counter >= 9) THEN
-				RAISE EXCEPTION 'Te pasaste de palabras claves wacho, no pueden ser m�s de %', counter;
+				RAISE EXCEPTION 'Te pasaste de palabras claves wacho, no pueden ser mÃ¡s de %', counter;
 			END IF;
 		ELSE
 			--tabla contiene
@@ -540,7 +538,7 @@ $$
 				FROM contiene
 				WHERE id_articulo = NEW.id_articulo;
 				if(counter >= 10) THEN
-					RAISE EXCEPTION 'Te pasaste de palabras claves wacho, no pueden ser m�s de %', counter;
+					RAISE EXCEPTION 'Te pasaste de palabras claves wacho, no pueden ser mÃ¡s de %', counter;
 				END IF;
 			END IF;
 		END IF;
@@ -1054,7 +1052,7 @@ WHERE NOT EXISTS (
 )
 
 --6)
---en el pr�ctico
+--en el prÃ¡ctico
 
 --EJERCICIO 4
 
@@ -1173,7 +1171,7 @@ WHERE cantidad >= 500
 --b) actualizable se utiliza el id de la tabla
 -- es una sola tabla y no se utiliza distinct ni nada rarito
 -- ni tampoco subconsultas en el select
-CREATE VIEW ENVIOS500-999_ AS
+CREATE VIEW ENVIOS500-999 AS
 SELECT *
 FROM envios500
 WHERE cantdad < 1000
@@ -1190,11 +1188,11 @@ WHERE id_articulo IN (
 --b) idem a la anterior
 
 CREATE VIEW ENVIOS_PROV AS 
-SELECT id_proveedor, count(*)
+SELECT id_proveedor, sum(cantidad)
 FROM envio
 GROUP BY id_proveedor
---b) no es actualizable xq se utiliza una funci�n de agregaci�n
--- adem�s tampoco se utiliza la clave completa
+--b) no es actualizable xq se utiliza una funciÃ³n de agregaciÃ³n
+-- ademÃ¡s tampoco se utiliza la clave completa
 
 --c)
 --estas no importa si tienen un check o no, ya que son inserts
@@ -1204,7 +1202,7 @@ INSERT INTO ENVIOS500 VALUES ('P2', 'A2', 300);
 --funciona de 10 si se realiza un check o no
 UPDATE ENVIOS500 SET cantidad=1000 WHERE id_proveedor= 'P1';
 
---si no se hace un check funciona y si se hace un check no xq no cumple la condici�n
+--si no se hace un check funciona y si se hace un check no xq no cumple la condiciÃ³n
 UPDATE ENVIOS500 SET cantidad=100 WHERE id_proveedor= 'P1';
 
 --EJERCICIO 2
@@ -1232,8 +1230,9 @@ WHERE EXTRACT (YEAR FROM fecha_nacimiento) BETWEEN 1970 AND 1979
 
 --4
 CREATE VIEW peliculas_entregadas AS
-SELECT codigo_pelicula, cantidad
+SELECT codigo_pelicula, sum(cantidad)
 FROM renglon_entrega
+GROUP BY codigo_pelicula
 
 --5
 CREATE VIEW distribuidoras_argentina AS 
@@ -1241,25 +1240,235 @@ SELECT d.id_distribuidor, nombre, direccion, telefono, tipo, nro_inscripcion, en
 FROM unc_esq_peliculas.distribuidor d JOIN unc_esq_peliculas.nacional n ON (d.id_distribuidor = n.id_distribuidor) 
 
 --6
-CREATE VIEW distribuidoras_mas_2_emp AS
-SELECT *
-FROM distribuidoras_argentina
-WHERE id_distribuidor IN (
-	SELECT id_distribuidor
-	FROM unc_esq_peliculas.departamento
-	WHERE id_departamento IN (
-		SELECT id_departamento
-		FROM unc_esq_peliculas.empleado
-		GROUP BY id_departamento
-		HAVING count(*) > 2
-	)
+SELECT id_distribuidor 
+FROM distribuidoras_argentina d
+WHERE NOT EXISTS (
+	SELECT 1
+	FROM empleado
+	WHERE id_distribuidor = d.id_distribuidor
+	GROUP BY id_distribuidor, id_departamento
+	HAVING count(*) <= 2
+) AND EXISTS (
+	SELECT 1
+	FROM empleado
+	WHERE id_distribuidor = d.id_distribuidor
 )
 
+SELECT id_distribuidor, id_departamento, count(*)
+FROM empleado
+WHERE id_distribuidor IN (
+	SELECT id_distribuidor
+	FROM nacional
+)
+GROUP BY id_distribuidor, id_departamento
+ORDER BY 1
 
+--EJERCICIO 4
+
+EMPLEADO_DIST_20:
+con CHECK LOCAL o CASCADE a la hora de realizarse una actualizaciÃ³n, esta NO se realiza si como resultado se migran tuplas de la vista, es decir
+NO se cumple la condiciÃ³n para que estÃ©n entre los resultados
+en el caso de CASCADE NO importa xq NO esta utilizando otras vistas xD
+
+EMPLEADO_DIST_2000:
+con CHECK LOCAL es igual al caso anterior
+con CHECK CASCADE se chequea tambiÃ©n sobre la vista anterior
+con CHECK LOCAL se verifica la condiciÃ³n y si la vista anterior tiene algÃºn CHECK tambiÃ©n se verifica.
+
+EMPLEADO_DIST_20_70:
+igual al analisis anterior
+
+-- EJERCICIO 5
+
+--1.a) Ensamble mediante RIR, FK â‰¡ K (coincide con la clave)
+--1.b) la clave preservada es la de distribuidor y los campos que pueden actualizarse son los de esa tabla.
+--1.c)
+CREATE VIEW nacional_kp_1 AS
+SELECT N.Id_distribuidor, nro_inscripcion, id_distrib_mayorista, encargado, nombre, direccion, telefono, tipo
+FROM peliculas_distribuidor D JOIN peliculas_nacional N ON (d.id_distribuidor = n.id_distribuidor);
+
+
+CREATE OR REPLACE FUNCTION FN_nacional_kp_1() RETURNS trigger AS
+$$
+	--DECLARE
+	BEGIN
+		if(TG_OP = 'DELETE') THEN
+			DELETE FROM pelicula_nacional WHERE id_distribuidor = OLD.id_distribuidor;
+			DELETE FROM pelicula_distribuidor WHERE id_distribuidor = OLD.id_distribuidor;
+			RETURN NULL;
+		END IF;
+	
+		IF(TG_OP = 'UPDATE') THEN
+			UPDATE pelicula_distribuidor SET 
+				id_distribuidor = NEW.id_distribuidor,
+				nombre = NEW.nombre,
+				direccion = NEW.direccion,
+				telefono = NEW.telefono,
+				tipo = NEW.tipo
+				WHERE id_distribuidor = NEW.id_distribuidor;
+		ELSE --es un insert
+			INSERT INTO pelicula_distribuidor VALUES (NEW.id_distribuidor,NEW.nombre,NEW.direccion,NEW.telefono,NEW.tipo);
+		END IF;
+	
+		--si es un insert o un update de la vista se tiene que hacer la siguiente verificaciÃ³n
+		IF(EXISTS(SELECT 1 FROM pelicula_nacional WHERE id_distribuidor = NEW.id_distribuidor)) THEN
+			UPDATE pelicula_nacional SET 
+				nro_inscripcion = NEW.nro_inscripcion,
+				encargado = NEW.encargado,
+				id_distrib_mayorista = NEW.id_distrib_mayorista
+				WHERE id_distribuidor = NEW.id_distribuidor;
+		ELSE
+			INSERT INTO pelicula_nacional VALUES (NEW.id_distribuidor,NEW.nro_inscripcion,NEW.encargado,NEW.id_distrib_mayorista);
+		END IF;
+		RETURN NULL;
+	END
+$$
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER TR_nacional_kp_1
+	INSTEAD OF INSERT OR DELETE OR UPDATE
+	ON nacional_kp_1
+	FOR EACH ROW
+	--WHEN (Condition) i.e NEW.nombre_pais = 'Argentina'
+	EXECUTE PROCEDURE FN_nacional_kp_1();
+
+DROP TRIGGER tr_nacional_kp_1 ON nacional_kp_1
+
+UPDATE nacional_kp_1 SET nombre = 'Cio' WHERE id_distribuidor = 651;
+
+SELECT N.Id_distribuidor, nro_inscripcion, id_distrib_mayorista, encargado, nombre, direccion, telefono, tipo
+FROM pelicula_distribuidor D JOIN peliculas_nacional N ON (d.id_distribuidor = n.id_distribuidor;
+
+INSERT INTO nacional_kp_1 VALUES
+	(6666,666,NULL,'Cio','Cio','avenida 666',666,'N')
+;
+
+DELETE FROM nacional_kp_1 WHERE id_distribuidor = 6666;
+
+SELECT * FROM nacional_kp_1
+where id_distribuidor = 651
+
+SELECT *
+FROM nacional_kp_1 WHERE id_distribuidor = 6666
+
+UPDATE nacional_kp_1 SET encargado ='OmegaCio' WHERE id_distribuidor = 6666;
+UPDATE nacional_kp_1 SET telefono = '6cio' WHERE id_distribuidor = 6666;
+
+
+--2.a) Caso (1): mÃ¡s intuitivoâ†’ Ensamble mediante RIR, FK= atrib. secundarios
+--2.b) id_ciudad que proviene de la tabla ciudad, solo se pueden actualizar los campos de esta tabla (no se puede el nombre del pais)
+--2.c)
+CREATE VIEW CIUDAD_KP_2 AS 
+SELECT id_ciudad, nombre_ciudad, C.id_pais, nombre_pais
+FROM pelicula_ciudad C JOIN pelicula_pais P ON (c.id_pais = p.id_pais);
+
+CREATE OR REPLACE FUNCTION FN_ciudad_kp_2() RETURNS trigger AS
+$$
+	--DECLARE
+	BEGIN
+		if(TG_OP = 'DELETE') THEN
+			DELETE FROM pelicula_ciudad WHERE id_ciudad = OLD.id_ciudad;
+			RETURN NULL;
+		END IF;
+		IF(TG_OP = 'UPDATE') THEN
+			UPDATE pelicula_pais SET nombre_pais = NEW.nombre_pais WHERE id_pais = NEW.id_pais;
+			IF(NEW.id_ciudad <> OLD.id_ciudad) THEN --actualizo xq ademÃ¡s del id_ciudad puede estar cambiando todo
+				UPDATE pelicula_ciudad SET 
+					id_ciudad = NEW.id_ciudad,
+					nombre_ciudad = NEW.nombre_ciudad,
+					id_pais = NEW.id_pais;
+			ELSE  --no actualizo el id xq sino me tira error de que el id existe!
+				UPDATE pelicula_ciudad SET
+					nombre_ciudad = NEW.nombre_ciudad,
+					id_pais = NEW.id_pais;
+			END IF;
+			RETURN NULL;
+		ELSE --es un insert
+			IF(NOT EXISTS(SELECT 1 FROM pelicula_pais WHERE id_pais = NEW.id_pais)) THEN
+				INSERT INTO pelicula_pais VALUES (NEW.id_pais, NEW.nombre_pais);
+			ELSE --estoy insertando una nueva tupla con un pais que ya existe pero capaz que le quiere cambiar el nombre jaja
+				UPDATE pelicula_pais SET nombre_pais = NEW.nombre_pais WHERE id_pais = NEW.id_pais;
+			END IF;
+			--ahora que nos aseguramos de que el paÃ­s existe podemos agregar la ciudad
+			INSERT INTO pelicula_ciudad VALUES (NEW.id_ciudad, NEW.nombre_ciudad, NEW.id_pais);
+		END IF;
+		RETURN NULL;
+	END
+$$
+LANGUAGE 'plpgsql';
+
+DROP TRIGGER tr_ciudad_kp_2 ON ciudad_kp_2
+
+CREATE TRIGGER TR_ciudad_kp_2
+	INSTEAD OF INSERT OR DELETE OR UPDATE
+	ON ciudad_kp_2
+	FOR EACH ROW
+	EXECUTE PROCEDURE FN_ciudad_kp_2();
+
+SELECT * FROM ciudad_kp_2 LIMIT 1
+
+UPDATE ciudad_kp_2 SET nombre_ciudad = 'cioCiudad' WHERE id_ciudad = 683;
+
+--3.a) Ensamble mediante RIR, FK âŠ‚  K (subconjunto de los atrib. clave)
+--3.b) la clave es nro_entrega y re.codigo_pelicula y proviene de la tabla renglon_entrega, solo se pueden actualizar los datos de esta tabla.
+-- el estandar de SQL dice que se pueden hacer actualizaciones sobre trabaja pero xq nose podrÃ­a actualizar los datos de las
+-- otras tablas si se tienen los id's?
+CREATE VIEW ENTREGAS_KP_3 AS
+SELECT nro_entrega, RE.codigo_pelicula, cantidad, titulo
+FROM pelicula_renglon_entrega RE JOIN pelicula_pelicula P ON (re.codigo_pelicula = p.codigo_pelicula);
+
+CREATE OR REPLACE FUNCTION FN_entregas_kp_3() RETURNS trigger AS
+$$
+	--DECLARE
+	BEGIN
+		if(TG_OP = 'DELETE') THEN
+			DELETE FROM pelicula_renglon_entrega WHERE nro_entrega = OLD.nro_entrega AND codigo_pelicula = OLD.codigo_pelicula;
+			RETURN NULL;
+		END IF;
+		IF(TG_OP = 'UPDATE') THEN
+			IF(NEW.nro_entrega <> OLD.nro_entrega) THEN
+				UPDATE pelicula_renglon_entrega SET nro_entrega = NEW.nro_entrega WHERE nro_entrega = OLD.nro_entrega AND codigo_pelicula = OLD.codigo_pelicula;
+				--no se si puedo usar el new.codigo_pelicula xq se puede haber actualizado!
+				--tampoco el new.nro_entrega xq es el que estoy actualizando
+			END IF;
+			IF(NEW.codigo_pelicula <> OLD.codigo_pelicula) THEN
+				UPDATE pelicula_renglon_entrega SET codigo_pelicula = NEW.codigo_pelicula WHERE nro_entrega = NEW.nro_entrega AND codigo_pelicula = OLD.codigo_pelicula;		
+				--aca si puedo usar el new.nro_entrega verdad?
+			END IF;
+			--finalmente actualizo el resto de los campos
+			UPDATE pelicula_renglon_entrega SET cantidad = NEW.cantidad WHERE nro_entrega = NEW.nro_entrega AND codigo_pelicula = NEW.codigo_pelicula;
+			UPDATE pelicula_pelicula SET titulo = NEW.titulo WHERE codigo_pelicula = NEW.codigo_pelicula;
+			RETURN NULL;
+		ELSE --es un insert
+			INSERT INTO pelicula_renglon_entrega VALUES (NEW.nro_entrega,NEW.codigo_pelicula,NEW.cantidad);
+			--por si se pone un titulo diferente al que tiene la pelicula???
+			UPDATE pelicula_pelicula SET titulo = NEW.titulo WHERE codigo_pelicula = NEW.codigo_pelicula;
+		END IF;
+		RETURN NULL;
+	END
+$$
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER TR_entregas_kp_3
+	INSTEAD OF INSERT OR DELETE OR UPDATE
+	ON ciudad_kp_2
+	FOR EACH ROW
+	EXECUTE PROCEDURE FN_ciudad_kp_2();
+
+--EJERCICIO 6
+--1 no se inserta xq no cumple el primer check de que el id no tiene REP.
+--2 no se inserta xq no cumple el check de las horas max xq son 5.5k
+--3 se inserta xq cumple el check del rep y también el de las horas
+--4 se inserta xq cumple el check de las horas.
+
+--EJERCICIO 7
+--1 no se inserta xq no cumple el check de las horas_aportadas
+--2 se inserta xq cumple el check de la edad y tambi�n el check de las horas_aportadas
+--3 no se inserta xq cumple el check de la edad pero no cumple el check de las horas.
+--4 no se inserta xq no se cumple las horas_aportadas
+--5 
 
 
 --END PRACTICO 5 #####################################################################################################
 --####################################################################################################################
-
-
-
+			
