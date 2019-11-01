@@ -1164,19 +1164,38 @@ WHERE e.id_empleado = t.id_empleado AND p.cod_proyecto = t.cod_proyecto AND e.ca
 --EJERCICIO 1
 --a)
 
-CREATE VIEW ENVIOS500 AS 
+SELECT *
+FROM envio
+
+CREATE VIEW ENVIOS500 AS
 SELECT *
 FROM envio
 WHERE cantidad >= 500
+WITH CASCADED CHECK OPTION
+
+SELECT *
+FROM envios500
+
 --b) actualizable se utiliza el id de la tabla
 -- es una sola tabla y no se utiliza distinct ni nada rarito
 -- ni tampoco subconsultas en el select
-CREATE VIEW ENVIOS500-999 AS
+
+CREATE VIEW ENVIOS500999 AS
 SELECT *
-FROM envios500
-WHERE cantdad < 1000
+FROM ENVIOS500
+WHERE cantidad < 1000;
+
+INSERT INTO envios500999 VALUES
+	(1,2,400)
+;
+
+DROP VIEW envios500 CASCADE;
+DROP VIEW envios500999 CASCADE;
+
 --b) actualizable idem a la anterior
 
+SELECT *
+FROM envios500
 
 CREATE VIEW PRODUCTOS_MAS_PEDIDOS AS
 SELECT id_articulo
@@ -1224,7 +1243,7 @@ WHERE sueldo > 2000
 
 --3
 CREATE VIEW empleado_20_70 AS
-SELECT id_empleado
+SELECT *
 FROM empleado_dist_20
 WHERE EXTRACT (YEAR FROM fecha_nacimiento) BETWEEN 1970 AND 1979
 
@@ -1240,13 +1259,13 @@ SELECT d.id_distribuidor, nombre, direccion, telefono, tipo, nro_inscripcion, en
 FROM unc_esq_peliculas.distribuidor d JOIN unc_esq_peliculas.nacional n ON (d.id_distribuidor = n.id_distribuidor) 
 
 --6
-SELECT id_distribuidor 
+SELECT id_distribuidor
 FROM distribuidoras_argentina d
 WHERE NOT EXISTS (
 	SELECT 1
 	FROM empleado
 	WHERE id_distribuidor = d.id_distribuidor
-	GROUP BY id_distribuidor, id_departamento
+	GROUP BY id_departamento
 	HAVING count(*) <= 2
 ) AND EXISTS (
 	SELECT 1
@@ -1266,14 +1285,14 @@ ORDER BY 1
 --EJERCICIO 4
 
 EMPLEADO_DIST_20:
-con CHECK LOCAL o CASCADE a la hora de realizarse una actualizaciÃ³n, esta NO se realiza si como resultado se migran tuplas de la vista, es decir
-NO se cumple la condiciÃ³n para que estÃ©n entre los resultados
+con CHECK LOCAL o CASCADE a la hora de realizarse una actualizacion, esta NO se realiza si como resultado se migran tuplas de la vista, es decir
+NO se cumple la condicion para que esten entre los resultados
 en el caso de CASCADE NO importa xq NO esta utilizando otras vistas xD
 
 EMPLEADO_DIST_2000:
 con CHECK LOCAL es igual al caso anterior
-con CHECK CASCADE se chequea tambiÃ©n sobre la vista anterior
-con CHECK LOCAL se verifica la condiciÃ³n y si la vista anterior tiene algÃºn CHECK tambiÃ©n se verifica.
+con CHECK CASCADE se chequea tambien sobre la vista anterior
+con CHECK LOCAL se verifica la condicion y si la vista anterior tiene algun CHECK tambien se verifica.
 
 EMPLEADO_DIST_20_70:
 igual al analisis anterior
@@ -1295,11 +1314,11 @@ $$
 		if(TG_OP = 'DELETE') THEN
 			DELETE FROM pelicula_nacional WHERE id_distribuidor = OLD.id_distribuidor;
 			DELETE FROM pelicula_distribuidor WHERE id_distribuidor = OLD.id_distribuidor;
-			RETURN NULL;
+			RETURN OLD ;-- NULL Y OLD TIENEN UNA DIFERENCIA PEQUE�A, GOOGLEAR
 		END IF;
 	
 		IF(TG_OP = 'UPDATE') THEN
-			UPDATE pelicula_distribuidor SET 
+			UPDATE pelicula_distribuidor SET
 				id_distribuidor = NEW.id_distribuidor,
 				nombre = NEW.nombre,
 				direccion = NEW.direccion,
@@ -1471,4 +1490,203 @@ CREATE TRIGGER TR_entregas_kp_3
 
 --END PRACTICO 5 #####################################################################################################
 --####################################################################################################################
-			
+		
+
+
+
+-- PARCIAL 2014
+CREATE TABLE PROBLEMA (
+	id_problema int NOT NULL,
+	id_sub_prod int NOT NULL,
+	id_producto int NOT NULL,
+	id_equ_reporta int NOT NULL,
+	id_des_reporta int NOT NULL,
+	id_equ_a_cargo int,
+	id_des_a_cargo int,
+	CONSTRAINT PK_PROBLEMA PRIMARY KEY (id_problema)
+);
+
+ALTER TABLE PROBLEMA ALTER COLUMN id_equ_reporta SET DEFAULT 4;
+ALTER TABLE PROBLEMA ALTER COLUMN id_des_reporta SET DEFAULT 4;
+
+CREATE TABLE DESARROLLADOR (
+	id_equipo int NOT NULL,	
+	id_desar int NOT NULL,
+	CONSTRAINT PK_DESARROLLADOR PRIMARY KEY (id_equipo, id_desar)
+);
+
+CREATE TABLE PRODUCTO (
+	id_producto int NOT NULL,
+	CONSTRAINT PK_PRODUCTO PRIMARY KEY (id_producto)
+);
+
+CREATE TABLE SUB_PROD (
+	id_sub_prod int NOT NULL,
+	id_producto int NOT NULL,
+	CONSTRAINT PK_SUB_PROD PRIMARY KEY (id_sub_prod,id_producto)
+);
+
+--FOREIGN KEYS
+
+ALTER TABLE PROBLEMA
+	ADD CONSTRAINT FK_PROBLEMA_DESARROLLADOR_REPORTA
+	FOREIGN KEY (id_equ_reporta,id_des_reporta)
+	REFERENCES DESARROLLADOR (id_equipo,id_desar)
+	ON DELETE SET DEFAULT
+	ON UPDATE RESTRICT
+;
+
+ALTER TABLE PROBLEMA
+	ADD CONSTRAINT FK_PROBLEMA_DESARROLLADOR_A_CARGO
+	FOREIGN KEY (id_equ_a_cargo,id_des_a_cargo)
+	REFERENCES DESARROLLADOR (id_equipo,id_desar)
+	ON DELETE SET NULL
+	ON UPDATE RESTRICT
+;
+
+ALTER TABLE PROBLEMA
+	ADD CONSTRAINT FK_PROBLEMA_SUB_PROD
+	FOREIGN KEY (id_sub_prod,id_producto)
+	REFERENCES SUB_PROD (id_sub_prod,id_producto)
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+;
+
+ALTER TABLE SUB_PROD
+	ADD CONSTRAINT FK_SUB_PROD_PRODUCTO
+	FOREIGN KEY (id_producto)
+	REFERENCES PRODUCTO (id_producto)
+	ON DELETE CASCADE
+	ON UPDATE RESTRICT
+;
+
+
+--PARCIAL 2018
+ALTER TABLE departamento ADD CONSTRAINT ck_no_mas_4
+CHECK (
+	NOT EXISTS (
+		SELECT 1
+		FROM departamento
+		GROUP BY tipo_doc, nro_doc
+		HAVING count(*) > 4
+	)
+);
+
+CREATE ASSERTION control_depto
+CHECK NOT EXISTS(
+	SELECT 1
+	FROM departamento d JOIN tipo_dpto t ON (d.id_tipo_depto = t.id_tipo_depto)
+	WHERE t.cant_habitaciones = 1 AND (d.tipo_doc,d.nro_doc) IN (
+	SELECT tipo_doc, nro_doc
+	FROM departamento
+	GROUP BY tipo_doc, nro_doc
+	HAVING count(*) > 4
+		)
+);
+
+SELECT tipo_doc,nro_doc
+FROM departamento
+GROUP BY tipo_doc, nro_doc
+HAVING count(*) > 2
+INTERSECT
+SELECT tipo_doc,nro_doc
+FROM departamento d JOIN habitacion h ON (d.id_dpto = h.id_dpto)
+GROUP BY d.id_dpto
+HAVING count(*) = 1
+
+
+CREATE OR REPLACE FUNCTION FN_update_habitacion() RETURNS trigger AS
+$$
+	DECLARE
+		prop record;
+	BEGIN
+		--OBTENGO EL ID DEL PROPIETARIO NUEVO DEL DEPTO
+		SELECT tipo_doc,nro_doc INTO id_prop_viejo
+		FROM departamento
+		WHERE id_depto = NEW.id_depto
+		
+		IF(id_prop_viejo IS NOT NULL)THEN 
+			--SI EL DEPARTAMENTO NUEVO NO TENIA HABITACIONES (AHORA PASARIA A TENER UNA)
+			IF(	((SELECT count(*) FROM habitacion WHERE id_depto = NEW.id_depto) = 0) 
+				AND --Y ADEMAS EL PROPIETARIO DEL NUEVO DEPARTAMENTO TIENE MAS DE 4 DEPTOS
+				((SELECT count(*) FROM departamento WHERE tipo_doc = prop.tipo_doc AND nro_doc = prop.nro_doc) > 4) 
+			THEN
+				RAISE EXCEPTION 'nain nain nain';
+			END IF;
+		END IF;
+		
+		--OBTENGO EL ID DEL PROPIETARIO VIEJO DEL DEPTO
+		SELECT tipo_doc,nro_doc INTO id_prop_viejo
+		FROM departamento
+		WHERE id_depto = OLD.id_depto
+		
+		IF(id_prop_viejo IS NOT NULL)THEN 
+			--SI EL DEPARTAMENTO VIEJO TENIA SOLO 2 HABITACIONES (AHORA PASARIA A TENER UNA)
+			IF(((SELECT count(*) FROM habitacion WHERE id_depto = OLD.id_depto) = 2) 
+				AND --Y ADEMAS EL PROPIETARIO DEL VIEJO DEPARTAMENTO TIENE MAS DE 4 DEPTOS
+				((SELECT count(*) FROM departamento WHERE tipo_doc = prop.tipo_doc AND nro_doc = prop.nro_doc) > 4) 
+			THEN
+				RAISE EXCEPTION 'nain nain nain';
+			END IF;
+		END IF;
+		RETURN NEW;
+	END 
+$$
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER TR_update_habitacion
+	BEFORE UPDATE OF id_depto
+	ON habitacion
+	FOR EACH ROW
+	EXECUTE PROCEDURE FN_update_habitacion();
+	
+CREATE OR REPLACE FUNCTION FN_update_departamento() RETURNS trigger AS
+$$
+	--DECLARE
+	BEGIN --SI EL NUEVO PROPIETARIO TENIA 4 O M�S DEPTOS
+		IF(((SELECT count(*) FROM departamento WHERE nro_doc = NEW.nro_doc AND tipo_doc = NEW.tipo_doc) >= 4))
+			AND --Y DENTRO DE UNO DE ESOS DEPTOS TENIA UNO CON UNA SOLA HABITACION    O JUSTO EL DEPTO TIENE UNA SOLA
+			((EXISTS(
+				SELECT 1 
+				FROM departamento d JOIN habitacion h ON (d.id_depto = h.id_depto)
+				WHERE nro_doc = NEW.nro_doc AND tipo_doc = NEW.tipo_doc
+				GROUP BY id_depto
+				HAVING count(*) = 1
+				)
+			)
+			OR --EFECTIVAMENTE EL DEPTO PUEDE TENER UNA SOLA HABITACION
+			((SELECT count(*) FROM habitacion WHERE id_depto = OLD.id_depto) = 1)
+			)) THEN
+			RAISE EXCEPTION 'nain nain nain'; 
+		END IF;
+		RETURN NEW;
+	END 
+$$
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER TR_update_departamento
+	BEFORE UPDATE OF nro_doc,tipo_doc
+	ON departamento
+	FOR EACH ROW
+	EXECUTE PROCEDURE FN_update_departamento();
+
+--EJEERCICIO 7
+--you can return integer or boolean too
+CREATE OR REPLACE FUNCTION FN_servicio(inicio date,fin date) RETURNS  TABLE(nro_doc numeric(11,0), tipo_doc bpchar(3), dias int)  AS
+$$
+	BEGIN
+		RETURN query
+		SELECT r.nro_doc,r.tipo_doc,fecha_hasta - fecha_desde AS "dias de alquier"
+		FROM unc_esq_dptos.reserva r 
+			JOIN unc_esq_dptos.reserva_hab rh ON (r.id_reserva = rh.id_reserva)
+			JOIN unc_esq_dptos.habitacion h ON (rh.id_habitacion = h.id_habitacion)
+		WHERE (cocina = TRUE) AND (fecha_reserva BETWEEN inicio AND fin)
+		ORDER BY fecha_reserva;
+	END
+$$
+LANGUAGE 'plpgsql';
+
+SELECT * FROM FN_servicio(to_date('2017-03-03','yyyy-mm-dd'),to_date('2017-03-12','yyyy-mm-dd'));
+	
+--EJERCICIO 8
+
