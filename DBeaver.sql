@@ -1577,18 +1577,30 @@ CHECK NOT EXISTS(
 	SELECT 1
 	FROM departamento d JOIN tipo_dpto t ON (d.id_tipo_depto = t.id_tipo_depto)
 	WHERE t.cant_habitaciones = 1 AND (d.tipo_doc,d.nro_doc) IN (
-	SELECT tipo_doc, nro_doc
-	FROM departamento
-	GROUP BY tipo_doc, nro_doc
-	HAVING count(*) > 4
+																SELECT tipo_doc, nro_doc
+																FROM departamento
+																GROUP BY tipo_doc, nro_doc
+																HAVING count(*) > 4
 		)
 );
+
+
+SELECT tipo_doc,nro_doc
+FROM departamento d JOIN tipo_dpto t ON (d.id_tipo_depto = t.id_tipo_depto)
+WHERE t.cant_habitaciones = 1 AND (d.tipo_doc,d.nro_doc) IN (
+SELECT tipo_doc, nro_doc
+FROM departamento
+GROUP BY tipo_doc, nro_doc
+HAVING count(*) > 2);
+
 
 SELECT tipo_doc,nro_doc
 FROM departamento
 GROUP BY tipo_doc, nro_doc
-HAVING count(*) > 2
+HAVING count(*) > 4
+
 INTERSECT
+
 SELECT tipo_doc,nro_doc
 FROM departamento d JOIN habitacion h ON (d.id_dpto = h.id_dpto)
 GROUP BY d.id_dpto
@@ -1679,14 +1691,329 @@ $$
 		SELECT r.nro_doc,r.tipo_doc,fecha_hasta - fecha_desde AS "dias de alquier"
 		FROM unc_esq_dptos.reserva r 
 			JOIN unc_esq_dptos.reserva_hab rh ON (r.id_reserva = rh.id_reserva)
-			JOIN unc_esq_dptos.habitacion h ON (rh.id_habitacion = h.id_habitacion)
+			JOIN unc_esq_dptos.habitacion h ON (rh.id_habitacion = h.id_habitacion) AND (rh.id_dpto = h.id_dpto)
 		WHERE (cocina = TRUE) AND (fecha_reserva BETWEEN inicio AND fin)
 		ORDER BY fecha_reserva;
 	END
 $$
 LANGUAGE 'plpgsql';
 
-SELECT * FROM FN_servicio(to_date('2017-03-03','yyyy-mm-dd'),to_date('2017-03-12','yyyy-mm-dd'));
+SELECT * FROM FN_servicio(to_date('2017-11-23','yyyy-mm-dd'),to_date('2017-12-04','yyyy-mm-dd'));
 	
 --EJERCICIO 8
+CREATE VIEW EstadoResrva AS
+SELECT r.id_reserva, cancelada
+FROM unc_esq_dptos.reserva r JOIN unc_esq_dptos.pago p ON (r.id_reserva = p.id_reserva)
+WHERE importe>1050
+
+
+
+
+CREATE VIEW EstadoReserva AS
+SELECT id_reserva, cancelada
+FROM unc_esq_dptos.reserva r
+WHERE r.id_reserva IN (
+	SELECT id_reserva
+	FROM unc_esq_dptos.pago
+	WHERE importe >1050
+	
+--###############################################################################################################################
+--PARCIAL 2016 ##################################################################################################################
+
+--EJERCICIO 4
+ALTER TABLE productoxorden ADD CONSTRAINT ck_no_mas_10
+CHECK (
+	NOT EXISTS (
+		SELECT 1
+		FROM productoxorden
+		GROUP BY id_producto
+		HAVING sum(cantidad) > 10
+	)
+);
+
+
+--EJERCICIO 6
+CREATE VIEW nro_libreta_ProductosNoOrdenados AS
+SELECT *
+FROM producto
+WHERE precio_unitario < 1000 AND id_producto NOT IN (
+	SELECT id_producto
+	FROM productoxorden
+	WHERE id_producto IS NOT NULL
+)
+
+--EJERCICIO 8
+CREATE VIEW ClientesConOrdenes AS
+
+SELECT c.*, count(*)
+FROM unc_esq_producto.cliente c LEFT JOIN unc_esq_producto.orden o ON (c.id_cliente = o.id_cliente)
+GROUP BY c.id_cliente
+ORDER BY 2
+
+SELECT id
+FROM prueba
+WHERE 1 IN (
+				SELECT value
+				FROM prueba
+				WHERE value IS NOT null
+)
+
+
+SELECT*
+FROM prueba
+
+CREATE OR REPLACE PROCEDURE  PR_STOCK_MENSUAL()
+LANGUAGE 'plpgsql' AS
+$BODY$
+	DECLARE 
+		indice record;
+	BEGIN
+		FOR indice IN 
+			SELECT id_producto, sum(cantidad) AS "vendido"
+			FROM productoxorden p JOIN orden o ON (p.nro_orden = o.nro_orden)
+			WHERE fecha >= current_date - INTERVAL '1 month'
+			GROUP BY id_producto
+		LOOP
+			UPDATE stock 
+			SET cantidad = cantidad - indice.vendido,
+				fecha = current_date
+			WHERE id_producto = indice.id_producto; 
+		END LOOP;
+	--don't use new or old
+	-- to use it you must do call name
+	END;
+$BODY$;
+
+
+CALL PRO_STOCK_MENSUAL();
+
+
+CREATE TABLE producto (
+	id_producto int,
+	nombre varchar(40),
+	CONSTRAINT PK_producto PRIMARY KEY (id_producto)
+);
+
+CREATE TABLE stock (
+	fecha date,
+	id_producto int,
+	cantidad int NOT NULL,
+	CONSTRAINT PK_stock PRIMARY KEY (fecha,id_producto)
+);
+
+CREATE TABLE productoxorden (
+	id_producto int,
+	nro_orden int,
+	cantidad int NOT null,
+	CONSTRAINT PK_productoxorder PRIMARY KEY (id_producto,nro_orden)
+);
+
+CREATE TABLE orden (
+	nro_orden int,
+	fecha date NOT null,
+	CONSTRAINT PK_orden PRIMARY KEY (nro_orden)
+);
+
+ALTER TABLE productoxorden
+	ADD CONSTRAINT FK_productoxorder_producto
+	FOREIGN KEY (id_producto)
+	REFERENCES producto (id_producto)
+	--ON DELETE [CASCADE | SET DEFAULT | RESTRICT | SET NULL]
+	--ON UPDATE [CASCADE | SET DEFAULT | RESTRICT | SET NULL]
+;
+
+ALTER TABLE productoxorden
+	ADD CONSTRAINT FK_productoxorder_orden
+	FOREIGN KEY (nro_orden)
+	REFERENCES orden (nro_orden)
+	--ON DELETE [CASCADE | SET DEFAULT | RESTRICT | SET NULL]
+	--ON UPDATE [CASCADE | SET DEFAULT | RESTRICT | SET NULL]
+;
+
+
+ALTER TABLE stock
+	ADD CONSTRAINT FK_stock_producto
+	FOREIGN KEY (id_producto)
+	REFERENCES producto (id_producto)
+	--ON DELETE [CASCADE | SET DEFAULT | RESTRICT | SET NULL]
+	--ON UPDATE [CASCADE | SET DEFAULT | RESTRICT | SET NULL]
+;
+
+INSERT INTO producto VALUES
+	(1,'masitas'),
+	(2,'papas'),
+	(3,'pan'),
+	(4,'lettuce'),
+	(5,'tomato'),
+	(6,'egg'),
+	(7,'rain'),
+	(8,'starfall'),
+	(9,'crossover'),
+	(10,'lemon')
+;
+
+INSERT INTO stock VALUES
+	(current_date - INTERVAL '1 month',1,50),
+	(current_date - INTERVAL '1 month',2,50),
+	(current_date - INTERVAL '1 month',3,50),
+	(current_date - INTERVAL '1 month',4,50),
+	(current_date - INTERVAL '1 month',5,50),
+	(current_date - INTERVAL '1 month',6,50),
+	(current_date - INTERVAL '1 month',7,50),
+	(current_date - INTERVAL '1 month',8,50),
+	(current_date - INTERVAL '1 month',9,50),
+	(current_date - INTERVAL '1 month',10,50)
+;
+
+
+
+INSERT INTO orden VALUES
+	(1,current_date - INTERVAL '20 days'),
+	(2,current_date - INTERVAL '15 days'),
+	(3,current_date - INTERVAL '5 days')
+;
+
+INSERT INTO productoxorden VALUES
+	(1,1,30),
+	(2,1,10),
+	(3,2,1),
+	(4,2,50),
+	(5,3,24),
+	(6,3,15)
+;
+
+SELECT * FROM productoxorden;
+SELECT * FROM producto;
+
+SELECT * FROM stock
+ORDER BY id_producto;
+SELECT *FROM orden;
+
+CALL PR_STOCK_MENSUAL();
+
+
+
+--END PARCIAL 2016 ##############################################################################################################
+--###############################################################################################################################
+
+
+
+--###############################################################################################################################
+--PARCIAL 2017 ##################################################################################################################
+
+--EJERCICIO 4
+ALTER TABLE equipo ADD CONSTRAINT ck_no_mas_500
+CHECK (
+	NOT EXISTS (
+		SELECT 1
+		FROM equipo
+		GROUP BY id_servicio
+		HAVING count(*) > 500
+	)
+);
+
+
+CREATE OR REPLACE PROCEDURE  PR_STOCK_MENSUAL()
+LANGUAGE 'plpgsql' AS
+$BODY$
+	DECLARE
+		resultado record;
+	BEGIN
+		SELECT id_producto, cantidad INTO resultado
+		FROM productoxorden p JOIN orden o ON (p.nro_orden = o.nro_orden)
+		WHERE fecha > current_date - INTERVAL '1 month'		
+	--don't use new or old
+	-- to use it you must do call STOCK_MENSUAL
+	END;
+$BODY$;
+
+SELECT id_producto, cantidad
+FROM productoxorden p JOIN orden o ON (p.nro_orden = o.nro_orden)
+WHERE fecha > current_date - INTERVAL '1 month'
+
+
+
+
+
+/*
++==============================+=========================================+=========================================+=========================================+
+|            Tablas            |                 Insert                  |                 Update                  |                 Delete                  |
++==============================+=========================================+=========================================+=========================================+
+| equipo                       |                ooooo                    |               id_servicio               | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx |
++------------------------------+-----------------------------------------+-----------------------------------------+-----------------------------------------+
+
+*/
+
+CREATE OR REPLACE FUNCTION FN_insert_update() RETURNS TRIGGER AS
+$BODY$
+	--DECLARE
+	BEGIN
+		IF((SELECT count(*) FROM equipo WHERE id_servicio = NEW.id_servicio) >= 500) THEN
+			RAISE EXCEPTION 'nain nain nain';
+		END IF;
+		RETURN NEW;
+	END 
+$BODY$
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER TR_insert_update
+	BEFORE INSERT OR UPDATE OF id_servicio
+	ON equpo
+	FOR EACH row
+	EXECUTE PROCEDURE FN_insert_update();
+
+--EJERCICIO 5 y 6 y 7
+
+/*
++==============================+=========================================+=========================================+=========================================+
+|            Tablas            |                 Insert                  |                 Update                  |                 Delete                  |
++==============================+=========================================+=========================================+=========================================+
+|         turno                |        xxxxxxxxxxxxxxxxxxxx             |           id_personal                   |            xxxxxxxxxxxxxxxxxx           |
++------------------------------+-----------------------------------------+-----------------------------------------+-----------------------------------------+
+|        comprobante           |        ooooooooooooooooooo              |           id_turno                      |            ooooooooooooooooo            |
++------------------------------+-----------------------------------------+-----------------------------------------+-----------------------------------------+
+*/
+
+
+
+CREATE ASSERTION no_mas_70
+CHECK NOT EXISTS(
+	SELECT 1
+	FROM turno t JOIN comprobante c ON (c.id_turno = t.id_turno)
+	GROUP BY id_personal
+	HAVING count(*) > 0.7*(SELECT count(*) FROM comprobante)
+	
+);
+
+--EJERCICIO 18
+SELECT nombre, apellido
+FROM comprobante c JOIN turno t ON (c.id_turno = t.id_turno) JOIN persona p ON (t.id_personal = p.id_persona)
+WHERE id_tcomp <> 2 AND p.id_persona IN(
+	SELECT t.id_personal
+	FROM comprobante c JOIN turno t ON (c.id_turno = t.id_turno)
+	WHERE fecha >= (to_date('4/11/2017','dd/mm/yyyy') - INTERVAL '7 years')
+)
+GROUP BY p.id_persona
+ORDER BY sum(importe)
+LIMIT 1
+OFFSET 2
+	
+--END PARCIAL 2017 ##############################################################################################################
+--###############################################################################################################################
+	
+SELECT 'aprobame '
+FROM prueba WHERE value IS NULL
+
+
+SELECT i.nombre_institucion, count(nro_voluntario)
+FROM institucion i LEFT JOIN voluntario v ON (i.id_institucion = v.id_institucion)
+GROUP BY i.id_institucion, nombre_institucion
+ORDER BY 2
+
+
+fundacion rural: 0
+casa de la providencia: 1 la jenny
+
+
+
 
