@@ -2000,20 +2000,6 @@ OFFSET 2
 	
 --END PARCIAL 2017 ##############################################################################################################
 --###############################################################################################################################
-	
-SELECT 'aprobame '
-FROM prueba WHERE value IS NULL
-
-
-SELECT i.nombre_institucion, count(nro_voluntario)
-FROM institucion i LEFT JOIN voluntario v ON (i.id_institucion = v.id_institucion)
-GROUP BY i.id_institucion, nombre_institucion
-ORDER BY 2
-
-
-fundacion rural: 0
-casa de la providencia: 1 la jenny
-
 
 
 
